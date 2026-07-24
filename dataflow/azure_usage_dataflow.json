@@ -1,0 +1,72 @@
+{
+	"name": "azure_usage_dataflow",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "AzureUsage_ds",
+						"type": "DatasetReference"
+					},
+					"name": "source"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "select"
+				},
+				{
+					"name": "filter"
+				},
+				{
+					"name": "cast"
+				},
+				{
+					"name": "aggregate"
+				},
+				{
+					"name": "sort"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          SubscriptionName as string,",
+				"          SubscriptionGuid as string,",
+				"          Date as string,",
+				"          ResourceGuid as string,",
+				"          ServiceName as string,",
+				"          ServiceType as string,",
+				"          ServiceRegion as string,",
+				"          ServiceResource as string,",
+				"          Quantity as double,",
+				"          Cost as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source",
+				"source select(mapColumn(",
+				"          Date,",
+				"          ServiceName,",
+				"          ServiceType,",
+				"          ServiceResource,",
+				"          Cost",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select",
+				"select filter(like(Date, '%/%')) ~> filter",
+				"filter cast(output(",
+				"          Date as date 'MM/dd/yyyy'",
+				"     ),",
+				"     errors: true) ~> cast",
+				"cast aggregate(groupBy(ServiceName,",
+				"          ServiceResource,",
+				"          Date),",
+				"     Cost = sum(Cost)) ~> aggregate",
+				"aggregate sort(asc(ServiceName, true),",
+				"     desc(Cost, true)) ~> sort"
+			]
+		}
+	}
+}
