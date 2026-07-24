@@ -1,0 +1,22 @@
+{
+	"name": "git_file_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "HttpServer_git_ls",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation",
+				"relativeUrl": "dipvir/Practice_git_repo/refs/heads/main/gold_demand_sector.csv"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
