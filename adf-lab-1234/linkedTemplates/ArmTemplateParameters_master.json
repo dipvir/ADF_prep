@@ -8,6 +8,9 @@
 		"adls_adf1lab1sa_connection_accountKey": {
 			"value": ""
 		},
+		"HttpServer_git_ls_properties_typeProperties_url": {
+			"value": "https://raw.githubusercontent.com"
+		},
 		"adls_adf1lab1sa_connection_properties_typeProperties_url": {
 			"value": "https://adf1lab1sa.dfs.core.windows.net/"
 		},
