@@ -1,6 +1,7 @@
 {
-	"name": "pl4_copy_filtered_data",
+	"name": "pl4_uisng_for_each_and_if_else",
 	"properties": {
+		"description": "it copy filtered files",
 		"activities": [
 			{
 				"name": "Get Folder Metadata",

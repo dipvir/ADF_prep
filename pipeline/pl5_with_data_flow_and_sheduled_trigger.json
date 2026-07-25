@@ -1,5 +1,5 @@
 {
-	"name": "pl5_azure_usage_data_flow",
+	"name": "pl5_with_data_flow_and_sheduled_trigger",
 	"properties": {
 		"activities": [
 			{

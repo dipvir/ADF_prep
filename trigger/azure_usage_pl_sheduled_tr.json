@@ -6,7 +6,7 @@
 		"pipelines": [
 			{
 				"pipelineReference": {
-					"referenceName": "pl5_azure_usage_data_flow",
+					"referenceName": "pl5_with_data_flow_and_sheduled_trigger",
 					"type": "PipelineReference"
 				}
 			}
