@@ -1,5 +1,5 @@
 {
-	"name": "azure_usage_data_flow_pl",
+	"name": "pl5_azure_usage_data_flow",
 	"properties": {
 		"activities": [
 			{
@@ -17,13 +17,62 @@
 				"typeProperties": {
 					"dataflow": {
 						"referenceName": "azure_usage_dataflow",
-						"type": "DataFlowReference"
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"sink": {
+								"folder_name": "csv_files",
+								"file_name": "azureusage/enriched_azureusage.csv"
+							}
+						}
 					},
 					"compute": {
 						"coreCount": 8,
 						"computeType": "General"
 					},
 					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "Lookup",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Data flow",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"wildcardFileName": "*.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "dynamic_destination_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"folder_name": "csv_files",
+							"file_name": "azureusage/"
+						}
+					},
+					"firstRowOnly": false
 				}
 			}
 		],

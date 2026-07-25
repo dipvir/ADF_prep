@@ -1,5 +1,5 @@
 {
-	"name": "copy_adls_data_pl",
+	"name": "pl1_copy_adls_data",
 	"properties": {
 		"activities": [
 			{

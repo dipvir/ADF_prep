@@ -12,13 +12,22 @@
 					"name": "source"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dynamic_destination_ds",
+						"type": "DatasetReference"
+					},
+					"name": "sink",
+					"rejectedDataLinkedService": {
+						"referenceName": "adls_adf1lab1sa_connection",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
 			"transformations": [
 				{
 					"name": "select"
-				},
-				{
-					"name": "filter"
 				},
 				{
 					"name": "cast"
@@ -28,6 +37,18 @@
 				},
 				{
 					"name": "sort"
+				},
+				{
+					"name": "split"
+				},
+				{
+					"name": "cast2"
+				},
+				{
+					"name": "union"
+				},
+				{
+					"name": "window"
 				}
 			],
 			"scriptLines": [
@@ -45,6 +66,7 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
+				"     limit: 3000,",
 				"     ignoreNoFilesFound: false) ~> source",
 				"source select(mapColumn(",
 				"          Date,",
@@ -55,17 +77,40 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> select",
-				"select filter(like(Date, '%/%')) ~> filter",
-				"filter cast(output(",
-				"          Date as date 'MM/dd/yyyy'",
+				"split@table1 cast(output(",
+				"          Date as date 'MM-dd-yyyy'",
 				"     ),",
 				"     errors: true) ~> cast",
-				"cast aggregate(groupBy(ServiceName,",
+				"union aggregate(groupBy(ServiceName,",
 				"          ServiceResource,",
-				"          Date),",
+				"          Date = year(Date)),",
 				"     Cost = sum(Cost)) ~> aggregate",
-				"aggregate sort(asc(ServiceName, true),",
-				"     desc(Cost, true)) ~> sort"
+				"window sort(asc(ServiceName, true),",
+				"     asc(running_total, true)) ~> sort",
+				"select split(like(Date, '%-%'),",
+				"     disjoint: false) ~> split@(table1, table2)",
+				"split@table2 cast(output(",
+				"          Date as date 'MM/dd/yyyy'",
+				"     ),",
+				"     errors: true) ~> cast2",
+				"cast2, cast union(byName: true)~> union",
+				"aggregate window(over(ServiceName),",
+				"     asc(Cost, true),",
+				"     running_total = sum(Cost)) ~> window",
+				"sort sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     mapColumn(",
+				"          ServiceName,",
+				"          ServiceResource,",
+				"          Date,",
+				"          Cost,",
+				"          running_total",
+				"     )) ~> sink"
 			]
 		}
 	}
