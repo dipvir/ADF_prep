@@ -927,6 +927,7 @@
 						"     running_total = sum(Cost)) ~> window",
 						"sort sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
+						"     truncate: true,",
 						"     umask: 0022,",
 						"     preCommands: [],",
 						"     postCommands: [],",
