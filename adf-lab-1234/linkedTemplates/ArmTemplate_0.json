@@ -437,7 +437,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/pl3_get_filtered_data')]",
+			"name": "[concat(parameters('factoryName'), '/pl3_uisng_for_each')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -546,10 +546,11 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/pl4_copy_filtered_data')]",
+			"name": "[concat(parameters('factoryName'), '/pl4_uisng_for_each_and_if_else')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
+				"description": "it copy filtered files",
 				"activities": [
 					{
 						"name": "Get Folder Metadata",
@@ -699,6 +700,135 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/pl6_using_set_variable_activity')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Metadata",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "csv_destination_ds",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "list of folder items",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "items_lst",
+							"value": {
+								"value": "@activity('Get Metadata').output.childItems",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Filter",
+						"type": "Filter",
+						"dependsOn": [
+							{
+								"activity": "list of folder items",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@variables('items_lst')",
+								"type": "Expression"
+							},
+							"condition": {
+								"value": "@contains(item().name, 'gold')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "filtered items",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Filter",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "filtered_items",
+							"value": {
+								"value": "@activity('Filter').output.value",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"items_lst": {
+						"type": "Array"
+					},
+					"filtered_items": {
+						"type": "Array"
+					}
+				},
+				"folder": {
+					"name": "Basic_Pipelines"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/csv_destination_ds')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/azure_usage_dataflow')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -824,135 +954,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/pl6_using_set_variable_activity')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "Get Metadata",
-						"type": "GetMetadata",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "csv_destination_ds",
-								"type": "DatasetReference",
-								"parameters": {}
-							},
-							"fieldList": [
-								"childItems"
-							],
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"enablePartitionDiscovery": false
-							},
-							"formatSettings": {
-								"type": "DelimitedTextReadSettings"
-							}
-						}
-					},
-					{
-						"name": "list of folder items",
-						"type": "SetVariable",
-						"dependsOn": [
-							{
-								"activity": "Get Metadata",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "items_lst",
-							"value": {
-								"value": "@activity('Get Metadata').output.childItems",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Filter",
-						"type": "Filter",
-						"dependsOn": [
-							{
-								"activity": "list of folder items",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@variables('items_lst')",
-								"type": "Expression"
-							},
-							"condition": {
-								"value": "@contains(item().name, 'gold')",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "filtered items",
-						"type": "SetVariable",
-						"dependsOn": [
-							{
-								"activity": "Filter",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "filtered_items",
-							"value": {
-								"value": "@activity('Filter').output.value",
-								"type": "Expression"
-							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"variables": {
-					"items_lst": {
-						"type": "Array"
-					},
-					"filtered_items": {
-						"type": "Array"
-					}
-				},
-				"folder": {
-					"name": "Basic_Pipelines"
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/csv_destination_ds')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl5_azure_usage_data_flow')]",
+			"name": "[concat(parameters('factoryName'), '/pl5_with_data_flow_and_sheduled_trigger')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -1057,7 +1059,7 @@
 				"pipelines": [
 					{
 						"pipelineReference": {
-							"referenceName": "pl5_azure_usage_data_flow",
+							"referenceName": "pl5_with_data_flow_and_sheduled_trigger",
 							"type": "PipelineReference"
 						},
 						"parameters": {}
@@ -1074,7 +1076,7 @@
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/pl5_azure_usage_data_flow')]"
+				"[concat(variables('factoryId'), '/pipelines/pl5_with_data_flow_and_sheduled_trigger')]"
 			]
 		}
 	]
