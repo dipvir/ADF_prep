@@ -2,7 +2,7 @@
 	"name": "azure_usage_pl_sheduled_tr",
 	"properties": {
 		"annotations": [],
-		"runtimeState": "Started",
+		"runtimeState": "Stopped",
 		"pipelines": [
 			{
 				"pipelineReference": {
