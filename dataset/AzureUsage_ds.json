@@ -6,7 +6,7 @@
 			"type": "LinkedServiceReference"
 		},
 		"folder": {
-			"name": "Basic_pl_datasets"
+			"name": "Basic_PL_datasets"
 		},
 		"annotations": [],
 		"type": "DelimitedText",
