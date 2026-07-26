@@ -282,7 +282,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/param_src_json_ds')]",
+			"name": "[concat(parameters('factoryName'), '/param_dest_json_ds')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -293,7 +293,7 @@
 				"parameters": {
 					"cont_name": {
 						"type": "string",
-						"defaultValue": "source-cont"
+						"defaultValue": "destination-cont"
 					},
 					"folder_name": {
 						"type": "string",
@@ -322,7 +322,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/param_dest_json_ds')]",
+			"name": "[concat(parameters('factoryName'), '/param_src_json_ds')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -333,7 +333,7 @@
 				"parameters": {
 					"cont_name": {
 						"type": "string",
-						"defaultValue": "destination-cont"
+						"defaultValue": "source-cont"
 					},
 					"folder_name": {
 						"type": "string",
@@ -913,6 +913,130 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/pl7_using_storage_event_trigger')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy json files",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*.json",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "param_src_json_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"cont_name": "source-cont",
+									"folder_name": "storage_event_folder"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "param_dest_json_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"cont_name": "destination-cont",
+									"folder_name": "storage_event_folder"
+								}
+							}
+						]
+					},
+					{
+						"name": "Delete copied src json files",
+						"type": "Delete",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "Copy json files",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "param_src_json_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"cont_name": "source-cont",
+									"folder_name": "storage_event_folder"
+								}
+							},
+							"logStorageSettings": {
+								"linkedServiceName": {
+									"referenceName": "adls_adf1lab1sa_connection",
+									"type": "LinkedServiceReference"
+								},
+								"path": "deleded-files-log"
+							},
+							"enableLogging": true,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"wildcardFileName": "*.json",
+								"enablePartitionDiscovery": false
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Basic_Pipelines"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/param_src_json_ds')]",
+				"[concat(variables('factoryId'), '/datasets/param_dest_json_ds')]",
+				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/azure_usage_dataflow')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
@@ -1034,128 +1158,6 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/AzureUsage_ds')]",
 				"[concat(variables('factoryId'), '/datasets/dynamic_destination_ds')]",
-				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl7_using_storage_event_trigger')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "Copy json files",
-						"type": "Copy",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "JsonSource",
-								"storeSettings": {
-									"type": "AzureBlobFSReadSettings",
-									"recursive": true,
-									"wildcardFileName": "*.json",
-									"enablePartitionDiscovery": false
-								},
-								"formatSettings": {
-									"type": "JsonReadSettings"
-								}
-							},
-							"sink": {
-								"type": "JsonSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "JsonWriteSettings"
-								}
-							},
-							"enableStaging": false
-						},
-						"inputs": [
-							{
-								"referenceName": "param_src_json_ds",
-								"type": "DatasetReference",
-								"parameters": {
-									"cont_name": "source-cont",
-									"folder_name": "storage_event_folder"
-								}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "param_dest_json_ds",
-								"type": "DatasetReference",
-								"parameters": {
-									"cont_name": "destination-cont",
-									"folder_name": "storage_event_folder"
-								}
-							}
-						]
-					},
-					{
-						"name": "Delete copied src json files",
-						"type": "Delete",
-						"dependsOn": [
-							{
-								"activity": "Copy json files",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "param_src_json_ds",
-								"type": "DatasetReference",
-								"parameters": {
-									"cont_name": "source-cont",
-									"folder_name": "storage_event_folder"
-								}
-							},
-							"logStorageSettings": {
-								"linkedServiceName": {
-									"referenceName": "adls_adf1lab1sa_connection",
-									"type": "LinkedServiceReference"
-								},
-								"path": "deleded-files-log"
-							},
-							"enableLogging": true,
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"recursive": true,
-								"wildcardFileName": "*.json",
-								"enablePartitionDiscovery": false
-							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"folder": {
-					"name": "Basic_Pipelines"
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/param_src_json_ds')]",
-				"[concat(variables('factoryId'), '/datasets/param_dest_json_ds')]",
 				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]"
 			]
 		},
