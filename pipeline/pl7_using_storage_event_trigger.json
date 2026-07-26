@@ -1,0 +1,112 @@
+{
+	"name": "pl7_using_storage_event_trigger",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy json files",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"wildcardFileName": "*.json",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "param_src_json_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"cont_name": "source-cont",
+							"folder_name": "storage_event_folder"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "param_dest_json_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"cont_name": "destination-cont",
+							"folder_name": "storage_event_folder"
+						}
+					}
+				]
+			},
+			{
+				"name": "Delete copied src json files",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Copy json files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "param_src_json_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"cont_name": "source-cont",
+							"folder_name": "storage_event_folder"
+						}
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "adls_adf1lab1sa_connection",
+							"type": "LinkedServiceReference"
+						},
+						"path": "deleded-files-log"
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "*.json",
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "Basic_Pipelines"
+		},
+		"annotations": []
+	}
+}

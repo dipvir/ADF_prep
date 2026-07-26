@@ -1,0 +1,35 @@
+{
+	"name": "param_dest_json_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "adls_adf1lab1sa_connection",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cont_name": {
+				"type": "string",
+				"defaultValue": "destination-cont"
+			},
+			"folder_name": {
+				"type": "string",
+				"defaultValue": "storage_event_folder"
+			}
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().folder_name",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().cont_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"schema": {}
+	}
+}
