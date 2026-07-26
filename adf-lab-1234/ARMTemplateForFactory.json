@@ -806,6 +806,9 @@
 					"referenceName": "adls_adf1lab1sa_connection",
 					"type": "LinkedServiceReference"
 				},
+				"folder": {
+					"name": "Basic_PL_datasets"
+				},
 				"annotations": [],
 				"type": "DelimitedText",
 				"typeProperties": {
@@ -835,6 +838,9 @@
 					"referenceName": "adls_adf1lab1sa_connection",
 					"type": "LinkedServiceReference"
 				},
+				"folder": {
+					"name": "Basic_PL_datasets"
+				},
 				"annotations": [],
 				"type": "DelimitedText",
 				"typeProperties": {
@@ -862,6 +868,9 @@
 				"linkedServiceName": {
 					"referenceName": "adls_adf1lab1sa_connection",
 					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Basic_PL_datasets"
 				},
 				"annotations": [],
 				"type": "DelimitedText",
@@ -897,6 +906,9 @@
 						"type": "string"
 					}
 				},
+				"folder": {
+					"name": "Basic_PL_datasets"
+				},
 				"annotations": [],
 				"type": "DelimitedText",
 				"typeProperties": {
@@ -928,6 +940,9 @@
 				"linkedServiceName": {
 					"referenceName": "adls_adf1lab1sa_connection",
 					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Basic_PL_datasets"
 				},
 				"annotations": [],
 				"type": "DelimitedText",
@@ -965,6 +980,9 @@
 						"type": "string"
 					}
 				},
+				"folder": {
+					"name": "Basic_PL_datasets"
+				},
 				"annotations": [],
 				"type": "DelimitedText",
 				"typeProperties": {
@@ -999,6 +1017,9 @@
 				"linkedServiceName": {
 					"referenceName": "HttpServer_git_ls",
 					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Basic_PL_datasets"
 				},
 				"annotations": [],
 				"type": "DelimitedText",
@@ -1036,6 +1057,9 @@
 						"type": "string",
 						"defaultValue": "storage_event_folder"
 					}
+				},
+				"folder": {
+					"name": "Basic_PL_datasets"
 				},
 				"annotations": [],
 				"type": "Json",
@@ -1076,6 +1100,9 @@
 						"type": "string",
 						"defaultValue": "storage_event_folder"
 					}
+				},
+				"folder": {
+					"name": "Basic_PL_datasets"
 				},
 				"annotations": [],
 				"type": "Json",
@@ -1166,7 +1193,7 @@
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"annotations": [],
-				"runtimeState": "Started",
+				"runtimeState": "Stopped",
 				"pipelines": [
 					{
 						"pipelineReference": {
