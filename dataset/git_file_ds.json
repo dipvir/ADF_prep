@@ -5,6 +5,9 @@
 			"referenceName": "HttpServer_git_ls",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Basic_pl_datasets"
+		},
 		"annotations": [],
 		"type": "DelimitedText",
 		"typeProperties": {

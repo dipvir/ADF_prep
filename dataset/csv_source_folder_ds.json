@@ -5,6 +5,9 @@
 			"referenceName": "adls_adf1lab1sa_connection",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Basic_pl_datasets"
+		},
 		"annotations": [],
 		"type": "DelimitedText",
 		"typeProperties": {

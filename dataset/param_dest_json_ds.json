@@ -15,6 +15,9 @@
 				"defaultValue": "storage_event_folder"
 			}
 		},
+		"folder": {
+			"name": "Basic_pl_datasets"
+		},
 		"annotations": [],
 		"type": "Json",
 		"typeProperties": {
