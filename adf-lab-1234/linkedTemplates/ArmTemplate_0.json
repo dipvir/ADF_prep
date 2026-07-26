@@ -978,8 +978,6 @@
 					{
 						"name": "Delete copied src json files",
 						"type": "Delete",
-						"state": "Inactive",
-						"onInactiveMarkAs": "Succeeded",
 						"dependsOn": [
 							{
 								"activity": "Copy json files",
