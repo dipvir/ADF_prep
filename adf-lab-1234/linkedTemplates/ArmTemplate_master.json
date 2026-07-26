@@ -19,6 +19,10 @@
 			"type": "string",
 			"defaultValue": "https://adf1lab1sa.dfs.core.windows.net/"
 		},
+		"storage_event_trigger_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/0a297b68-f9c2-47d6-884d-015f593a7aed/resourceGroups/adf_lab_rg/providers/Microsoft.Storage/storageAccounts/adf1lab1sa"
+		},
 		"containerUri": {
 			"type": "string",
 			"metadata": "URI to storage account containing linked ARM templates"
@@ -54,10 +58,33 @@
 					},
 					"adls_adf1lab1sa_connection_properties_typeProperties_url": {
 						"value": "[parameters('adls_adf1lab1sa_connection_properties_typeProperties_url')]"
+					},
+					"storage_event_trigger_properties_typeProperties_scope": {
+						"value": "[parameters('storage_event_trigger_properties_typeProperties_scope')]"
 					}
 				}
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "adf-lab-1234_ArmTemplate_1",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_1.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'adf-lab-1234_ArmTemplate_0')]"
+			]
 		}
 	]
 }
