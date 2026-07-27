@@ -190,15 +190,124 @@
 									],
 									"outputs": [
 										{
-											"referenceName": "src_blob_parquet_param_ds",
+											"referenceName": "dest_blob_parquet_param_ds",
 											"type": "DatasetReference",
 											"parameters": {
 												"Container": "destination-cont",
-												"Folder": "parquet_files",
-												"File": "orders_incr_parquet_file.parquet"
+												"Folder": "parquet_files/orders_incr_parquet_file"
 											}
 										}
 									]
+								},
+								{
+									"name": "update json file with max incr date",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Get max incr date",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "JsonSource",
+											"additionalColumns": [
+												{
+													"name": "cdc_timestamp",
+													"value": {
+														"value": "@activity('Get max incr date').output.resultSets[0].rows[0].max_incr_date",
+														"type": "Expression"
+													}
+												}
+											],
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "JsonReadSettings"
+											}
+										},
+										"sink": {
+											"type": "JsonSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "JsonWriteSettings"
+											}
+										},
+										"enableStaging": false
+									},
+									"inputs": [
+										{
+											"referenceName": "src_blob_json_param_ds",
+											"type": "DatasetReference",
+											"parameters": {
+												"Container": "source-cont",
+												"Folder": "json_files",
+												"File": "empty.json"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "src_blob_json_param_ds",
+											"type": "DatasetReference",
+											"parameters": {
+												"Container": "source-cont",
+												"Folder": "json_files",
+												"File": "cdc.json"
+											}
+										}
+									]
+								},
+								{
+									"name": "Get max incr date",
+									"type": "Script",
+									"dependsOn": [
+										{
+											"activity": "Copy Incremental or Backdated Data",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "AzureSqlDatabase_LS",
+										"type": "LinkedServiceReference"
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "Select max(last_updated) as max_incr_date From dbo.Orders",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
 								}
 							]
 						}
@@ -216,7 +325,7 @@
 				"[concat(variables('factoryId'), '/datasets/src_blob_json_param_ds')]",
 				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]",
 				"[concat(variables('factoryId'), '/datasets/src_azure_sql_query_ds')]",
-				"[concat(variables('factoryId'), '/datasets/src_blob_parquet_param_ds')]"
+				"[concat(variables('factoryId'), '/datasets/dest_blob_parquet_param_ds')]"
 			]
 		},
 		{
@@ -1629,7 +1738,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/src_blob_parquet_param_ds')]",
+			"name": "[concat(parameters('factoryName'), '/dest_blob_parquet_param_ds')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -1645,10 +1754,6 @@
 					"Folder": {
 						"type": "string",
 						"defaultValue": "parquet_files"
-					},
-					"File": {
-						"type": "string",
-						"defaultValue": "orders_incr_parquet_file.parquet"
 					}
 				},
 				"folder": {
@@ -1659,10 +1764,6 @@
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobFSLocation",
-						"fileName": {
-							"value": "@dataset().File",
-							"type": "Expression"
-						},
 						"folderPath": {
 							"value": "@dataset().Folder",
 							"type": "Expression"
