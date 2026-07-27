@@ -95,7 +95,7 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/AzureSqlTable1')]",
+			"name": "[concat(parameters('factoryName'), '/src_azure_sql_query_ds')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -109,9 +109,7 @@
 				"annotations": [],
 				"type": "AzureSqlTable",
 				"schema": [],
-				"typeProperties": {
-					"schema": "schm"
-				}
+				"typeProperties": {}
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]"
@@ -497,6 +495,58 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/src_blob_parquet_param_ds')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "adls_adf1lab1sa_connection",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Container": {
+						"type": "string",
+						"defaultValue": "destination-cont"
+					},
+					"Folder": {
+						"type": "string",
+						"defaultValue": "parquet_files"
+					},
+					"File": {
+						"type": "string",
+						"defaultValue": "orders_incr_parquet_file.parquet"
+					}
+				},
+				"folder": {
+					"name": "Advanced_PL_Datasets"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().File",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().Folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().Container",
+							"type": "Expression"
+						}
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/Incremental_backdated_load_pl')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -566,12 +616,93 @@
 								{
 									"type": "Query",
 									"text": {
-										"value": "Select count(*) From dbo.Orders \nWhere last_updated > '@{activity('Lookup Last Updated Date').output.firstRow.cdc_timestamp}'",
+										"value": "Select count(*) as incr_rows From dbo.Orders\nWhere last_updated > '@{activity('Lookup Last Updated Date').output.firstRow.cdc_timestamp}'",
 										"type": "Expression"
 									}
 								}
 							],
 							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "Check For Incremental Data",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Data Count",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(activity('Data Count').output.resultSets[0].rows[0].incr_rows, 0)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "Copy Incremental or Backdated Data",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "Select * From dbo.Orders\nWhere last_updated > '@{activity('Lookup Last Updated Date').output.firstRow.cdc_timestamp}'",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "src_azure_sql_query_ds",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "src_blob_parquet_param_ds",
+											"type": "DatasetReference",
+											"parameters": {
+												"Container": "destination-cont",
+												"Folder": "parquet_files",
+												"File": "orders_incr_parquet_file.parquet"
+											}
+										}
+									]
+								}
+							]
 						}
 					}
 				],
@@ -585,7 +716,9 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/src_blob_json_param_ds')]",
-				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]"
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]",
+				"[concat(variables('factoryId'), '/datasets/src_azure_sql_query_ds')]",
+				"[concat(variables('factoryId'), '/datasets/src_blob_parquet_param_ds')]"
 			]
 		},
 		{
@@ -1007,135 +1140,6 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/csv_source_folder_ds')]",
 				"[concat(variables('factoryId'), '/datasets/csv_source_dynamic_ds')]",
-				"[concat(variables('factoryId'), '/datasets/csv_destination_ds')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl6_using_set_variable_activity')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "Get Metadata",
-						"type": "GetMetadata",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "csv_destination_ds",
-								"type": "DatasetReference",
-								"parameters": {}
-							},
-							"fieldList": [
-								"childItems"
-							],
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"recursive": true,
-								"enablePartitionDiscovery": false
-							},
-							"formatSettings": {
-								"type": "DelimitedTextReadSettings"
-							}
-						}
-					},
-					{
-						"name": "list of folder items",
-						"type": "SetVariable",
-						"dependsOn": [
-							{
-								"activity": "Get Metadata",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "items_lst",
-							"value": {
-								"value": "@activity('Get Metadata').output.childItems",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "Filter",
-						"type": "Filter",
-						"dependsOn": [
-							{
-								"activity": "list of folder items",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@variables('items_lst')",
-								"type": "Expression"
-							},
-							"condition": {
-								"value": "@contains(item().name, 'gold')",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "filtered items",
-						"type": "SetVariable",
-						"dependsOn": [
-							{
-								"activity": "Filter",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "filtered_items",
-							"value": {
-								"value": "@activity('Filter').output.value",
-								"type": "Expression"
-							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"variables": {
-					"items_lst": {
-						"type": "Array"
-					},
-					"filtered_items": {
-						"type": "Array"
-					}
-				},
-				"folder": {
-					"name": "Basic_Pipelines"
-				},
-				"annotations": []
-			},
-			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/csv_destination_ds')]"
 			]
 		}
