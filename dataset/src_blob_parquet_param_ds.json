@@ -1,0 +1,47 @@
+{
+	"name": "src_blob_parquet_param_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "adls_adf1lab1sa_connection",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"Container": {
+				"type": "string",
+				"defaultValue": "destination-cont"
+			},
+			"Folder": {
+				"type": "string",
+				"defaultValue": "parquet_files"
+			},
+			"File": {
+				"type": "string",
+				"defaultValue": "orders_incr_parquet_file.parquet"
+			}
+		},
+		"folder": {
+			"name": "Advanced_PL_Datasets"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().File",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().Folder",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().Container",
+					"type": "Expression"
+				}
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}

@@ -1,5 +1,5 @@
 {
-	"name": "AzureSqlTable1",
+	"name": "src_azure_sql_query_ds",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "AzureSqlDatabase_LS",
@@ -10,9 +10,6 @@
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
-		"schema": [],
-		"typeProperties": {
-			"schema": "schm"
-		}
+		"schema": []
 	}
 }
