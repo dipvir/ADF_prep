@@ -6,12 +6,381 @@
 			"type": "string",
 			"metadata": "Data Factory name",
 			"defaultValue": "adf-lab-1234"
+		},
+		"storage_event_trigger_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/0a297b68-f9c2-47d6-884d-015f593a7aed/resourceGroups/adf_lab_rg/providers/Microsoft.Storage/storageAccounts/adf1lab1sa"
 		}
 	},
 	"variables": {
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl7_using_storage_event_trigger')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy json files",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*.json",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "param_src_json_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"cont_name": "source-cont",
+									"folder_name": "storage_event_folder"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "param_dest_json_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"cont_name": "destination-cont",
+									"folder_name": "storage_event_folder"
+								}
+							}
+						]
+					},
+					{
+						"name": "Delete copied src json files",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "Copy json files",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "param_src_json_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"cont_name": "source-cont",
+									"folder_name": "storage_event_folder"
+								}
+							},
+							"logStorageSettings": {
+								"linkedServiceName": {
+									"referenceName": "adls_adf1lab1sa_connection",
+									"type": "LinkedServiceReference"
+								},
+								"path": "deleded-files-log"
+							},
+							"enableLogging": true,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"wildcardFileName": "*.json",
+								"enablePartitionDiscovery": false
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Basic_Pipelines"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/azure_usage_dataflow')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "AzureUsage_ds",
+								"type": "DatasetReference"
+							},
+							"name": "source"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "dynamic_destination_ds",
+								"type": "DatasetReference"
+							},
+							"name": "sink",
+							"rejectedDataLinkedService": {
+								"referenceName": "adls_adf1lab1sa_connection",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "select"
+						},
+						{
+							"name": "cast"
+						},
+						{
+							"name": "aggregate"
+						},
+						{
+							"name": "sort"
+						},
+						{
+							"name": "split"
+						},
+						{
+							"name": "cast2"
+						},
+						{
+							"name": "union"
+						},
+						{
+							"name": "window"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          SubscriptionName as string,",
+						"          SubscriptionGuid as string,",
+						"          Date as string,",
+						"          ResourceGuid as string,",
+						"          ServiceName as string,",
+						"          ServiceType as string,",
+						"          ServiceRegion as string,",
+						"          ServiceResource as string,",
+						"          Quantity as double,",
+						"          Cost as double",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     limit: 3000,",
+						"     ignoreNoFilesFound: false) ~> source",
+						"source select(mapColumn(",
+						"          Date,",
+						"          ServiceName,",
+						"          ServiceType,",
+						"          ServiceResource,",
+						"          Cost",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select",
+						"split@table1 cast(output(",
+						"          Date as date 'MM-dd-yyyy'",
+						"     ),",
+						"     errors: true) ~> cast",
+						"union aggregate(groupBy(ServiceName,",
+						"          ServiceResource,",
+						"          Date = year(Date)),",
+						"     Cost = sum(Cost)) ~> aggregate",
+						"window sort(asc(ServiceName, true),",
+						"     asc(running_total, true)) ~> sort",
+						"select split(like(Date, '%-%'),",
+						"     disjoint: false) ~> split@(table1, table2)",
+						"split@table2 cast(output(",
+						"          Date as date 'MM/dd/yyyy'",
+						"     ),",
+						"     errors: true) ~> cast2",
+						"cast2, cast union(byName: true)~> union",
+						"aggregate window(over(ServiceName),",
+						"     asc(Cost, true),",
+						"     running_total = sum(Cost)) ~> window",
+						"sort sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     truncate: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     mapColumn(",
+						"          ServiceName,",
+						"          ServiceResource,",
+						"          Date,",
+						"          Cost,",
+						"          running_total",
+						"     )) ~> sink"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl5_with_data_flow_and_sheduled_trigger')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "azure_usage_dataflow",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"source": {},
+									"sink": {
+										"folder_name": "csv_files",
+										"file_name": "azureusage/enriched_azureusage.csv"
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "Lookup",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Data flow",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*.csv",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "dynamic_destination_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"folder_name": "csv_files",
+									"file_name": "azureusage/"
+								}
+							},
+							"firstRowOnly": false
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Basic_Pipelines"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/azure_usage_dataflow')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/storage_event_trigger')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl7_using_storage_event_trigger",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "BlobEventsTrigger",
+				"typeProperties": {
+					"blobPathBeginsWith": "/source-cont/blobs/storage_event_folder/",
+					"blobPathEndsWith": ".json",
+					"ignoreEmptyBlobs": true,
+					"scope": "[parameters('storage_event_trigger_properties_typeProperties_scope')]",
+					"events": [
+						"Microsoft.Storage.BlobCreated"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl7_using_storage_event_trigger')]"
+			]
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/azure_usage_pl_sheduled_tr')]",
 			"type": "Microsoft.DataFactory/factories/triggers",
@@ -38,7 +407,9 @@
 					}
 				}
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl5_with_data_flow_and_sheduled_trigger')]"
+			]
 		}
 	]
 }

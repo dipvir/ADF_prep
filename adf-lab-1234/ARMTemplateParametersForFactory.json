@@ -5,8 +5,20 @@
 		"factoryName": {
 			"value": "adf-lab-1234"
 		},
+		"AzureSqlDatabase_LS_password": {
+			"value": ""
+		},
 		"adls_adf1lab1sa_connection_accountKey": {
 			"value": ""
+		},
+		"AzureSqlDatabase_LS_properties_typeProperties_server": {
+			"value": "sql-database-server-1234.database.windows.net"
+		},
+		"AzureSqlDatabase_LS_properties_typeProperties_database": {
+			"value": "sql-database-1234"
+		},
+		"AzureSqlDatabase_LS_properties_typeProperties_userName": {
+			"value": "Dipveer"
 		},
 		"HttpServer_git_ls_properties_typeProperties_url": {
 			"value": "https://raw.githubusercontent.com"
