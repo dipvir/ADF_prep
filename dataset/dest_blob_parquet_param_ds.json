@@ -1,5 +1,5 @@
 {
-	"name": "src_blob_parquet_param_ds",
+	"name": "dest_blob_parquet_param_ds",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "adls_adf1lab1sa_connection",
