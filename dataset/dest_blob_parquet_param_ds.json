@@ -13,10 +13,6 @@
 			"Folder": {
 				"type": "string",
 				"defaultValue": "parquet_files"
-			},
-			"File": {
-				"type": "string",
-				"defaultValue": "orders_incr_parquet_file.parquet"
 			}
 		},
 		"folder": {
@@ -27,10 +23,6 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
-				"fileName": {
-					"value": "@dataset().File",
-					"type": "Expression"
-				},
 				"folderPath": {
 					"value": "@dataset().Folder",
 					"type": "Expression"

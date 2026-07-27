@@ -145,8 +145,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"Container": "destination-cont",
-										"Folder": "parquet_files",
-										"File": "orders_incr_parquet_file.parquet"
+										"Folder": "parquet_files/orders_incr_parquet_file"
 									}
 								}
 							]
