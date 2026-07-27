@@ -1,0 +1,46 @@
+{
+	"name": "src_blob_json_param_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "adls_adf1lab1sa_connection",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"Container": {
+				"type": "string",
+				"defaultValue": "source-cont"
+			},
+			"Folder": {
+				"type": "string",
+				"defaultValue": "json_files"
+			},
+			"File": {
+				"type": "string",
+				"defaultValue": "cdc.json"
+			}
+		},
+		"folder": {
+			"name": "Advanced_PL_Datasets"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().File",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().Folder",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().Container",
+					"type": "Expression"
+				}
+			}
+		},
+		"schema": {}
+	}
+}
