@@ -1,6 +1,7 @@
 {
-	"name": "Incremental_backdated_load_pl",
+	"name": "Incremental_backdated_Ingestion_pl",
 	"properties": {
+		"description": "From azure sql db to adls parquet file Incremental/backdated data Ingestion",
 		"activities": [
 			{
 				"name": "Lookup CDC Dates",
