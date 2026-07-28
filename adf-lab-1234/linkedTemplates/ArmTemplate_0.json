@@ -95,27 +95,6 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/src_azure_sql_query_ds')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "AzureSqlDatabase_LS",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "Advanced_PL_Datasets"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/AzureUsage_ds')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -274,6 +253,50 @@
 					"escapeChar": "\\",
 					"firstRowAsHeader": false,
 					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/dest_blob_parquet_param_ds')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "adls_adf1lab1sa_connection",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"Container": {
+						"type": "string",
+						"defaultValue": "destination-cont"
+					},
+					"Folder": {
+						"type": "string",
+						"defaultValue": "parquet_files"
+					}
+				},
+				"folder": {
+					"name": "Advanced_PL_Datasets"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().Folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().Container",
+							"type": "Expression"
+						}
+					},
+					"compressionCodec": "snappy"
 				},
 				"schema": []
 			},
@@ -444,6 +467,27 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/src_azure_sql_query_ds')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase_LS",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Advanced_PL_Datasets"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/src_blob_json_param_ds')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -495,57 +539,13 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/dest_blob_parquet_param_ds')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "adls_adf1lab1sa_connection",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"Container": {
-						"type": "string",
-						"defaultValue": "destination-cont"
-					},
-					"Folder": {
-						"type": "string",
-						"defaultValue": "parquet_files"
-					}
-				},
-				"folder": {
-					"name": "Advanced_PL_Datasets"
-				},
-				"annotations": [],
-				"type": "Parquet",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"folderPath": {
-							"value": "@dataset().Folder",
-							"type": "Expression"
-						},
-						"fileSystem": {
-							"value": "@dataset().Container",
-							"type": "Expression"
-						}
-					},
-					"compressionCodec": "snappy"
-				},
-				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/Incremental_backdated_load_pl')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"activities": [
 					{
-						"name": "Lookup Last Updated Date",
+						"name": "Lookup CDC Dates",
 						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
@@ -577,7 +577,7 @@
 									"File": "cdc.json"
 								}
 							},
-							"firstRowOnly": true
+							"firstRowOnly": false
 						}
 					},
 					{
@@ -585,7 +585,7 @@
 						"type": "Script",
 						"dependsOn": [
 							{
-								"activity": "Lookup Last Updated Date",
+								"activity": "Lookup CDC Dates",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -608,7 +608,7 @@
 								{
 									"type": "Query",
 									"text": {
-										"value": "Select count(*) as incr_rows From dbo.Orders\nWhere last_updated > '@{activity('Lookup Last Updated Date').output.firstRow.cdc_timestamp}'",
+										"value": "Select sum(incr_rows) as incr_rows From\n(Select count(*) as incr_rows From dbo.Orders\nWhere last_updated > '@{activity('Lookup CDC Dates').output.value[0].max_cdc_timestamp}'\nunion all\nSelect count(*) as incr_rows From dbo.Orders\nWhere last_updated <\n'@{activity('Lookup CDC Dates').output.value[0].min_cdc_timestamp}' ) as tbl\n\n",
 										"type": "Expression"
 									}
 								}
@@ -650,7 +650,7 @@
 										"source": {
 											"type": "AzureSqlSource",
 											"sqlReaderQuery": {
-												"value": "Select * From dbo.Orders\nWhere last_updated > '@{activity('Lookup Last Updated Date').output.firstRow.cdc_timestamp}'",
+												"value": "Select * From dbo.Orders\nWhere last_updated > '@{activity('Lookup CDC Dates').output.value[0].max_cdc_timestamp}'\nunion all\nSelect * From dbo.Orders\nWhere last_updated < '@{activity('Lookup CDC Dates').output.value[0].min_cdc_timestamp}'",
 												"type": "Expression"
 											},
 											"queryTimeout": "02:00:00",
@@ -698,7 +698,7 @@
 									"type": "Copy",
 									"dependsOn": [
 										{
-											"activity": "Get max incr date",
+											"activity": "Get max_min date",
 											"dependencyConditions": [
 												"Succeeded"
 											]
@@ -717,9 +717,16 @@
 											"type": "JsonSource",
 											"additionalColumns": [
 												{
-													"name": "cdc_timestamp",
+													"name": "max_cdc_timestamp",
 													"value": {
-														"value": "@activity('Get max incr date').output.resultSets[0].rows[0].max_incr_date",
+														"value": "@activity('Get max_min date').output.resultSets[0].rows[0].max_date",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "min_cdc_timestamp",
+													"value": {
+														"value": "@activity('Get max_min date').output.resultSets[0].rows[0].min_date",
 														"type": "Expression"
 													}
 												}
@@ -768,7 +775,7 @@
 									]
 								},
 								{
-									"name": "Get max incr date",
+									"name": "Get max_min date",
 									"type": "Script",
 									"dependsOn": [
 										{
@@ -795,7 +802,7 @@
 											{
 												"type": "Query",
 												"text": {
-													"value": "Select max(last_updated) as max_incr_date From dbo.Orders",
+													"value": "Select max(last_updated) as max_date, min(last_updated) as min_date From dbo.Orders",
 													"type": "Expression"
 												}
 											}
