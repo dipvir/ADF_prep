@@ -1,0 +1,27 @@
+{
+	"name": "src_rest_api_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "rest_api_ls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"url": {
+					"value": "@dataset().url_ds",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"url_ds": {
+				"type": "string",
+				"defaultValue": "https://pokeapi.co/api/v2/pokemon/"
+			}
+		},
+		"folder": {
+			"name": "Advanced_PL_Datasets"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"schema": []
+	}
+}

@@ -1,0 +1,168 @@
+{
+	"name": "paginated_rest_api_ingestion_pl",
+	"properties": {
+		"description": "Ingestion from rest api to blob in json file.",
+		"activities": [
+			{
+				"name": "Check Rest API Response 2",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": "https://pokeapi.co/api/v2/pokemon/"
+				}
+			},
+			{
+				"name": "Copy All RestAPI Data With Pagination",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Check Rest API Response 2",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET",
+						"paginationRules": {
+							"AbsoluteUrl": "$.next"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "src_rest_api_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"url_ds": "https://pokeapi.co/api/v2/pokemon/"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "src_blob_json_param_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"Container": "source-cont",
+							"Folder": "json_files",
+							"File": "pokemon_rest_api_data.json"
+						}
+					}
+				]
+			},
+			{
+				"name": "Check Rest API Response",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"url": "https://jsonplaceholder.typicode.com/users"
+				}
+			},
+			{
+				"name": "Copy All RestAPI Data",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Check Rest API Response",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET",
+						"paginationRules": {
+							"supportRFC5988": "true"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "src_rest_api_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"url_ds": "https://jsonplaceholder.typicode.com/users"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "src_blob_json_param_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"Container": "source-cont",
+							"Folder": "json_files",
+							"File": "users_rest_api_data.json"
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "Advanced_Pipelines"
+		},
+		"annotations": []
+	}
+}
