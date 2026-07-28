@@ -1,10 +1,16 @@
 {
 	"name": "rest_api_ls",
 	"properties": {
+		"parameters": {
+			"url": {
+				"type": "string",
+				"defaultValue": "https://pokeapi.co/api/v2/pokemon/"
+			}
+		},
 		"annotations": [],
 		"type": "RestService",
 		"typeProperties": {
-			"url": "https://pokeapi.co/api/v2/pokemon/",
+			"url": "@{linkedService().url}",
 			"enableServerCertificateValidation": true,
 			"authenticationType": "Anonymous"
 		}
