@@ -1,5 +1,5 @@
 {
-	"name": "paginated_rest_api_ingestion_pl",
+	"name": "Rest_api_ingestion_pl",
 	"properties": {
 		"description": "Ingestion from rest api to blob in json file.",
 		"activities": [
