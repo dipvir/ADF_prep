@@ -6,6 +6,8 @@
 			{
 				"name": "Get Child Items",
 				"type": "GetMetadata",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [],
 				"policy": {
 					"timeout": "0.12:00:00",
@@ -40,6 +42,8 @@
 			{
 				"name": "Loop Over Files",
 				"type": "ForEach",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [
 					{
 						"activity": "Get Child Items",
@@ -62,7 +66,7 @@
 							"userProperties": [],
 							"typeProperties": {
 								"on": {
-									"value": "@split(item().name, '.')[1]",
+									"value": "@split(item().name, '.')[sub(length(split(item().name, '.')), 1)]",
 									"type": "Expression"
 								},
 								"cases": [
@@ -425,6 +429,49 @@
 							}
 						}
 					]
+				}
+			},
+			{
+				"name": "Delete All src Files",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "Loop Over Files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "csv_dynamic_ds",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "source-cont",
+							"folder": "all_files_event"
+						}
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "adls_adf1lab1sa_connection",
+							"type": "LinkedServiceReference"
+						},
+						"path": "deleded-files-log"
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": false,
+						"enablePartitionDiscovery": false
+					}
 				}
 			}
 		],
