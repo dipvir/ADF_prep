@@ -14,7 +14,7 @@
 		"type": "BlobEventsTrigger",
 		"typeProperties": {
 			"blobPathBeginsWith": "/source-cont/blobs/storage_event_folder/",
-			"blobPathEndsWith": ".json",
+			"blobPathEndsWith": "success",
 			"ignoreEmptyBlobs": true,
 			"scope": "/subscriptions/0a297b68-f9c2-47d6-884d-015f593a7aed/resourceGroups/adf_lab_rg/providers/Microsoft.Storage/storageAccounts/adf1lab1sa",
 			"events": [
