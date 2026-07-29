@@ -1,7 +1,7 @@
 {
 	"name": "Split_src_files_pl",
 	"properties": {
-		"description": "b2b",
+		"description": "splits files based on format and copies b2b",
 		"activities": [
 			{
 				"name": "Get Child Items",
@@ -29,6 +29,7 @@
 					],
 					"storeSettings": {
 						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
 						"enablePartitionDiscovery": false
 					},
 					"formatSettings": {
@@ -69,7 +70,73 @@
 										"value": "json",
 										"activities": [
 											{
-												"name": "Copy Json File",
+												"name": "Copy Json Files",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "JsonSource",
+														"storeSettings": {
+															"type": "AzureBlobFSReadSettings",
+															"recursive": false,
+															"enablePartitionDiscovery": false
+														},
+														"formatSettings": {
+															"type": "JsonReadSettings"
+														}
+													},
+													"sink": {
+														"type": "JsonSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "JsonWriteSettings"
+														}
+													},
+													"enableStaging": false
+												},
+												"inputs": [
+													{
+														"referenceName": "src_blob_json_param_ds",
+														"type": "DatasetReference",
+														"parameters": {
+															"Container": "source-cont",
+															"Folder": "all_files_event",
+															"File": {
+																"value": "@item().name",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "src_blob_json_param_ds",
+														"type": "DatasetReference",
+														"parameters": {
+															"Container": "destination-cont",
+															"Folder": "json_files",
+															"File": "@item().name"
+														}
+													}
+												]
+											}
+										]
+									},
+									{
+										"value": "csv",
+										"activities": [
+											{
+												"name": "Copy CSV Files",
 												"type": "Copy",
 												"dependsOn": [],
 												"policy": {
@@ -120,30 +187,239 @@
 														"parameters": {
 															"container": "source-cont",
 															"folder": "all_files_event",
-															"file": {
-																"value": "@item()",
-																"type": "Expression"
-															}
+															"file": "@item().name"
 														}
 													}
 												],
 												"outputs": [
 													{
 														"referenceName": "csv_all_dynamic_ds",
-														"type": "DatasetReference"
+														"type": "DatasetReference",
+														"parameters": {
+															"container": "destination-cont",
+															"folder": "csv_files",
+															"file": "@item().name"
+														}
 													}
 												]
 											}
 										]
 									},
 									{
-										"value": "parquet"
+										"value": "txt",
+										"activities": [
+											{
+												"name": "Copy Text Files",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "AzureBlobFSReadSettings",
+															"recursive": false,
+															"enablePartitionDiscovery": false
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "csv_all_dynamic_ds",
+														"type": "DatasetReference",
+														"parameters": {
+															"container": "source-cont",
+															"folder": "all_files_event",
+															"file": "@item().name"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "csv_all_dynamic_ds",
+														"type": "DatasetReference",
+														"parameters": {
+															"container": "destination-cont",
+															"folder": "text_files",
+															"file": "@item().name"
+														}
+													}
+												]
+											}
+										]
 									},
 									{
-										"value": "csv"
-									},
+										"value": "parquet",
+										"activities": [
+											{
+												"name": "Copy Parquet Files",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "AzureBlobFSReadSettings",
+															"recursive": false,
+															"enablePartitionDiscovery": false
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "csv_all_dynamic_ds",
+														"type": "DatasetReference",
+														"parameters": {
+															"container": "source-cont",
+															"folder": "all_files_event",
+															"file": "@item().name"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "csv_all_dynamic_ds",
+														"type": "DatasetReference",
+														"parameters": {
+															"container": "destination-cont",
+															"folder": "parquet_files",
+															"file": "@item().name"
+														}
+													}
+												]
+											}
+										]
+									}
+								],
+								"defaultActivities": [
 									{
-										"value": "txt"
+										"name": "Copy Other Files",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobFSReadSettings",
+													"recursive": false,
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "AzureBlobFSWriteSettings"
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".txt"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "csv_all_dynamic_ds",
+												"type": "DatasetReference",
+												"parameters": {
+													"container": "source-cont",
+													"folder": "all_files_event",
+													"file": "@item().name"
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "csv_all_dynamic_ds",
+												"type": "DatasetReference",
+												"parameters": {
+													"container": "destination-cont",
+													"folder": "other_files",
+													"file": "@item().name"
+												}
+											}
+										]
 									}
 								]
 							}
