@@ -2511,6 +2511,7 @@
 				"type": "BlobEventsTrigger",
 				"typeProperties": {
 					"blobPathBeginsWith": "/source-cont/blobs/all_files_event",
+					"blobPathEndsWith": "success",
 					"ignoreEmptyBlobs": true,
 					"scope": "[parameters('storage_event_trigger_2_properties_typeProperties_scope')]",
 					"events": [
