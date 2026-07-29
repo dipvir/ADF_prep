@@ -1,6 +1,7 @@
 {
 	"name": "pl7_using_storage_event_trigger",
 	"properties": {
+		"description": "Filter only Json files form src path and copies in dest.",
 		"activities": [
 			{
 				"name": "Copy json files",
