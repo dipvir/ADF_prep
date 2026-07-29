@@ -35,7 +35,15 @@
 			"type": "string",
 			"defaultValue": "https://adf1lab1sa.dfs.core.windows.net/"
 		},
+		"rest_api_ls_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "@{linkedService().url}"
+		},
 		"storage_event_trigger_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/0a297b68-f9c2-47d6-884d-015f593a7aed/resourceGroups/adf_lab_rg/providers/Microsoft.Storage/storageAccounts/adf1lab1sa"
+		},
+		"storage_event_trigger_2_properties_typeProperties_scope": {
 			"type": "string",
 			"defaultValue": "/subscriptions/0a297b68-f9c2-47d6-884d-015f593a7aed/resourceGroups/adf_lab_rg/providers/Microsoft.Storage/storageAccounts/adf1lab1sa"
 		},
@@ -86,6 +94,9 @@
 					},
 					"adls_adf1lab1sa_connection_properties_typeProperties_url": {
 						"value": "[parameters('adls_adf1lab1sa_connection_properties_typeProperties_url')]"
+					},
+					"rest_api_ls_properties_typeProperties_url": {
+						"value": "[parameters('rest_api_ls_properties_typeProperties_url')]"
 					}
 				}
 			},
@@ -107,6 +118,9 @@
 					},
 					"storage_event_trigger_properties_typeProperties_scope": {
 						"value": "[parameters('storage_event_trigger_properties_typeProperties_scope')]"
+					},
+					"storage_event_trigger_2_properties_typeProperties_scope": {
+						"value": "[parameters('storage_event_trigger_2_properties_typeProperties_scope')]"
 					}
 				}
 			},

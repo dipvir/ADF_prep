@@ -35,7 +35,15 @@
 			"type": "string",
 			"defaultValue": "https://adf1lab1sa.dfs.core.windows.net/"
 		},
+		"rest_api_ls_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "@{linkedService().url}"
+		},
 		"storage_event_trigger_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/0a297b68-f9c2-47d6-884d-015f593a7aed/resourceGroups/adf_lab_rg/providers/Microsoft.Storage/storageAccounts/adf1lab1sa"
+		},
+		"storage_event_trigger_2_properties_typeProperties_scope": {
 			"type": "string",
 			"defaultValue": "/subscriptions/0a297b68-f9c2-47d6-884d-015f593a7aed/resourceGroups/adf_lab_rg/providers/Microsoft.Storage/storageAccounts/adf1lab1sa"
 		}
@@ -45,10 +53,11 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('factoryName'), '/Incremental_backdated_load_pl')]",
+			"name": "[concat(parameters('factoryName'), '/Incremental_backdated_Ingestion_pl')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
+				"description": "From azure sql db to adls parquet file Incremental/backdated data Ingestion",
 				"activities": [
 					{
 						"name": "Lookup CDC Dates",
@@ -333,6 +342,675 @@
 				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]",
 				"[concat(variables('factoryId'), '/datasets/src_azure_sql_query_ds')]",
 				"[concat(variables('factoryId'), '/datasets/dest_blob_parquet_param_ds')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Rest_api_ingestion_pl')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Ingestion from rest api to blob in json file.",
+				"activities": [
+					{
+						"name": "Check Rest API Response 2",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "GET",
+							"headers": {},
+							"url": "https://pokeapi.co/api/v2/pokemon/"
+						}
+					},
+					{
+						"name": "Copy All RestAPI Data With Pagination",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Check Rest API Response 2",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"AbsoluteUrl": "$.next"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "src_rest_api_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"url_ds": "https://pokeapi.co/api/v2/pokemon/"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "src_blob_json_param_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"Container": "source-cont",
+									"Folder": "json_files",
+									"File": "pokemon_rest_api_data.json"
+								}
+							}
+						]
+					},
+					{
+						"name": "Check Rest API Response",
+						"type": "WebActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "GET",
+							"headers": {},
+							"url": "https://jsonplaceholder.typicode.com/users"
+						}
+					},
+					{
+						"name": "Copy All RestAPI Data",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Check Rest API Response",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "src_rest_api_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"url_ds": "https://jsonplaceholder.typicode.com/users"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "src_blob_json_param_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"Container": "source-cont",
+									"Folder": "json_files",
+									"File": "users_rest_api_data.json"
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Advanced_Pipelines"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/src_rest_api_ds')]",
+				"[concat(variables('factoryId'), '/datasets/src_blob_json_param_ds')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Split_src_files_pl')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "splits files based on format and copies b2b",
+				"activities": [
+					{
+						"name": "Get Child Items",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "csv_dynamic_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"container": "source-cont",
+									"folder": "all_files_event"
+								}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "Loop Over Files",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get Child Items",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Child Items').output.childItems",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Splits Files Format Wise",
+									"type": "Switch",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"on": {
+											"value": "@split(item().name, '.')[sub(length(split(item().name, '.')), 1)]",
+											"type": "Expression"
+										},
+										"cases": [
+											{
+												"value": "json",
+												"activities": [
+													{
+														"name": "Copy Json Files",
+														"type": "Copy",
+														"dependsOn": [],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"source": {
+																"type": "JsonSource",
+																"storeSettings": {
+																	"type": "AzureBlobFSReadSettings",
+																	"recursive": false,
+																	"enablePartitionDiscovery": false
+																},
+																"formatSettings": {
+																	"type": "JsonReadSettings"
+																}
+															},
+															"sink": {
+																"type": "JsonSink",
+																"storeSettings": {
+																	"type": "AzureBlobFSWriteSettings"
+																},
+																"formatSettings": {
+																	"type": "JsonWriteSettings"
+																}
+															},
+															"enableStaging": false
+														},
+														"inputs": [
+															{
+																"referenceName": "src_blob_json_param_ds",
+																"type": "DatasetReference",
+																"parameters": {
+																	"Container": "source-cont",
+																	"Folder": "all_files_event",
+																	"File": {
+																		"value": "@item().name",
+																		"type": "Expression"
+																	}
+																}
+															}
+														],
+														"outputs": [
+															{
+																"referenceName": "src_blob_json_param_ds",
+																"type": "DatasetReference",
+																"parameters": {
+																	"Container": "destination-cont",
+																	"Folder": "json_files",
+																	"File": "@item().name"
+																}
+															}
+														]
+													}
+												]
+											},
+											{
+												"value": "csv",
+												"activities": [
+													{
+														"name": "Copy CSV Files",
+														"type": "Copy",
+														"dependsOn": [],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"source": {
+																"type": "DelimitedTextSource",
+																"storeSettings": {
+																	"type": "AzureBlobFSReadSettings",
+																	"recursive": false,
+																	"enablePartitionDiscovery": false
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextReadSettings"
+																}
+															},
+															"sink": {
+																"type": "DelimitedTextSink",
+																"storeSettings": {
+																	"type": "AzureBlobFSWriteSettings"
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextWriteSettings",
+																	"quoteAllText": true,
+																	"fileExtension": ".txt"
+																}
+															},
+															"enableStaging": false,
+															"translator": {
+																"type": "TabularTranslator",
+																"typeConversion": true,
+																"typeConversionSettings": {
+																	"allowDataTruncation": true,
+																	"treatBooleanAsNumber": false
+																}
+															}
+														},
+														"inputs": [
+															{
+																"referenceName": "csv_all_dynamic_ds",
+																"type": "DatasetReference",
+																"parameters": {
+																	"container": "source-cont",
+																	"folder": "all_files_event",
+																	"file": "@item().name"
+																}
+															}
+														],
+														"outputs": [
+															{
+																"referenceName": "csv_all_dynamic_ds",
+																"type": "DatasetReference",
+																"parameters": {
+																	"container": "destination-cont",
+																	"folder": "csv_files",
+																	"file": "@item().name"
+																}
+															}
+														]
+													}
+												]
+											},
+											{
+												"value": "txt",
+												"activities": [
+													{
+														"name": "Copy Text Files",
+														"type": "Copy",
+														"dependsOn": [],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"source": {
+																"type": "DelimitedTextSource",
+																"storeSettings": {
+																	"type": "AzureBlobFSReadSettings",
+																	"recursive": false,
+																	"enablePartitionDiscovery": false
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextReadSettings"
+																}
+															},
+															"sink": {
+																"type": "DelimitedTextSink",
+																"storeSettings": {
+																	"type": "AzureBlobFSWriteSettings"
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextWriteSettings",
+																	"quoteAllText": true,
+																	"fileExtension": ".txt"
+																}
+															},
+															"enableStaging": false,
+															"translator": {
+																"type": "TabularTranslator",
+																"typeConversion": true,
+																"typeConversionSettings": {
+																	"allowDataTruncation": true,
+																	"treatBooleanAsNumber": false
+																}
+															}
+														},
+														"inputs": [
+															{
+																"referenceName": "csv_all_dynamic_ds",
+																"type": "DatasetReference",
+																"parameters": {
+																	"container": "source-cont",
+																	"folder": "all_files_event",
+																	"file": "@item().name"
+																}
+															}
+														],
+														"outputs": [
+															{
+																"referenceName": "csv_all_dynamic_ds",
+																"type": "DatasetReference",
+																"parameters": {
+																	"container": "destination-cont",
+																	"folder": "text_files",
+																	"file": "@item().name"
+																}
+															}
+														]
+													}
+												]
+											},
+											{
+												"value": "parquet",
+												"activities": [
+													{
+														"name": "Copy Parquet Files",
+														"type": "Copy",
+														"dependsOn": [],
+														"policy": {
+															"timeout": "0.12:00:00",
+															"retry": 0,
+															"retryIntervalInSeconds": 30,
+															"secureOutput": false,
+															"secureInput": false
+														},
+														"userProperties": [],
+														"typeProperties": {
+															"source": {
+																"type": "DelimitedTextSource",
+																"storeSettings": {
+																	"type": "AzureBlobFSReadSettings",
+																	"recursive": false,
+																	"enablePartitionDiscovery": false
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextReadSettings"
+																}
+															},
+															"sink": {
+																"type": "DelimitedTextSink",
+																"storeSettings": {
+																	"type": "AzureBlobFSWriteSettings"
+																},
+																"formatSettings": {
+																	"type": "DelimitedTextWriteSettings",
+																	"quoteAllText": true,
+																	"fileExtension": ".txt"
+																}
+															},
+															"enableStaging": false,
+															"translator": {
+																"type": "TabularTranslator",
+																"typeConversion": true,
+																"typeConversionSettings": {
+																	"allowDataTruncation": true,
+																	"treatBooleanAsNumber": false
+																}
+															}
+														},
+														"inputs": [
+															{
+																"referenceName": "csv_all_dynamic_ds",
+																"type": "DatasetReference",
+																"parameters": {
+																	"container": "source-cont",
+																	"folder": "all_files_event",
+																	"file": "@item().name"
+																}
+															}
+														],
+														"outputs": [
+															{
+																"referenceName": "csv_all_dynamic_ds",
+																"type": "DatasetReference",
+																"parameters": {
+																	"container": "destination-cont",
+																	"folder": "parquet_files",
+																	"file": "@item().name"
+																}
+															}
+														]
+													}
+												]
+											}
+										],
+										"defaultActivities": [
+											{
+												"name": "Copy Other Files",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "AzureBlobFSReadSettings",
+															"recursive": false,
+															"enablePartitionDiscovery": false
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "csv_all_dynamic_ds",
+														"type": "DatasetReference",
+														"parameters": {
+															"container": "source-cont",
+															"folder": "all_files_event",
+															"file": "@item().name"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "csv_all_dynamic_ds",
+														"type": "DatasetReference",
+														"parameters": {
+															"container": "destination-cont",
+															"folder": "other_files",
+															"file": "@item().name"
+														}
+													}
+												]
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Delete All src Files",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "Loop Over Files",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "csv_dynamic_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"container": "source-cont",
+									"folder": "all_files_event"
+								}
+							},
+							"logStorageSettings": {
+								"linkedServiceName": {
+									"referenceName": "adls_adf1lab1sa_connection",
+									"type": "LinkedServiceReference"
+								},
+								"path": "deleded-files-log"
+							},
+							"enableLogging": true,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": false,
+								"enablePartitionDiscovery": false
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Advanced_Pipelines"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/csv_dynamic_ds')]",
+				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]",
+				"[concat(variables('factoryId'), '/datasets/csv_all_dynamic_ds')]",
+				"[concat(variables('factoryId'), '/datasets/src_blob_json_param_ds')]"
 			]
 		},
 		{
@@ -1137,6 +1815,58 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/csv_all_dynamic_ds')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "adls_adf1lab1sa_connection",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"container": {
+						"type": "string"
+					},
+					"folder": {
+						"type": "string"
+					},
+					"file": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Advanced_PL_Datasets"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().file",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": false,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/csv_destination_ds')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -1159,6 +1889,51 @@
 					"columnDelimiter": ",",
 					"escapeChar": "\\",
 					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/adls_adf1lab1sa_connection')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/csv_dynamic_ds')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "adls_adf1lab1sa_connection",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"container": {
+						"type": "string"
+					},
+					"folder": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Advanced_PL_Datasets"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().folder",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().container",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": false,
 					"quoteChar": "\""
 				},
 				"schema": []
@@ -1549,6 +2324,39 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/src_rest_api_ds')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "rest_api_ls",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"url": {
+							"value": "@dataset().url_ds",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"url_ds": {
+						"type": "string",
+						"defaultValue": "https://pokeapi.co/api/v2/pokemon/"
+					}
+				},
+				"folder": {
+					"name": "Advanced_PL_Datasets"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/rest_api_ls')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabase_LS')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -1598,6 +2406,27 @@
 						"type": "SecureString",
 						"value": "[parameters('adls_adf1lab1sa_connection_accountKey')]"
 					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/rest_api_ls')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"parameters": {
+					"url": {
+						"type": "string",
+						"defaultValue": "https://pokeapi.co/api/v2/pokemon/"
+					}
+				},
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('rest_api_ls_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
 				}
 			},
 			"dependsOn": []
@@ -1661,6 +2490,36 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/pipelines/pl7_using_storage_event_trigger')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/storage_event_trigger_2')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "Split_src_files_pl",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "BlobEventsTrigger",
+				"typeProperties": {
+					"blobPathBeginsWith": "/source-cont/blobs/all_files_event",
+					"ignoreEmptyBlobs": true,
+					"scope": "[parameters('storage_event_trigger_2_properties_typeProperties_scope')]",
+					"events": [
+						"Microsoft.Storage.BlobCreated"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/Split_src_files_pl')]"
 			]
 		},
 		{
