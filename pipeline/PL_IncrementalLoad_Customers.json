@@ -5,8 +5,6 @@
 			{
 				"name": "LookupOldWatermark",
 				"type": "Lookup",
-				"state": "Inactive",
-				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [],
 				"policy": {
 					"timeout": "0.12:00:00",
@@ -33,8 +31,6 @@
 			{
 				"name": "LookupNewWatermark",
 				"type": "Lookup",
-				"state": "Inactive",
-				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [],
 				"policy": {
 					"timeout": "0.12:00:00",
@@ -61,8 +57,6 @@
 			{
 				"name": "CopyIncrementalData",
 				"type": "Copy",
-				"state": "Inactive",
-				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [
 					{
 						"activity": "LookupNewWatermark",
@@ -134,8 +128,6 @@
 			{
 				"name": "UpdateWatermarkControl",
 				"type": "SqlServerStoredProcedure",
-				"state": "Inactive",
-				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [
 					{
 						"activity": "CopyIncrementalData",
@@ -156,7 +148,10 @@
 					"storedProcedureName": "[dbo].[sp_UpdateWatermark]",
 					"storedProcedureParameters": {
 						"NewWatermarkValue": {
-							"value": "@activity('LookupNewWatermark').output.firstRow.NewWatermarkValue",
+							"value": {
+								"value": "@activity('LookupNewWatermark').output.firstRow.NewWatermarkValue",
+								"type": "Expression"
+							},
 							"type": "DateTime"
 						},
 						"TableName": {
@@ -194,6 +189,7 @@
 						"type": "ParquetSource",
 						"storeSettings": {
 							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
 							"enablePartitionDiscovery": false
 						},
 						"formatSettings": {
