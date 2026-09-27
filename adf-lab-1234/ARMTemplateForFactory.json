@@ -345,6 +345,248 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/PL_IncrementalLoad_Customers')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "LookupOldWatermark",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT WatermarkValue FROM dbo.WatermarkControl Where TableName = 'Customers'",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "src_azure_sql_query_ds",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": true
+						}
+					},
+					{
+						"name": "LookupNewWatermark",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT MAX(LastModifiedDate) AS NewWatermarkValue FROM Customers;",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "src_azure_sql_query_ds",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": true
+						}
+					},
+					{
+						"name": "Final_Parquet_Lookup",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "New Records Check",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "ParquetSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "ParquetReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "dest_blob_parquet_param_ds",
+								"type": "DatasetReference",
+								"parameters": {
+									"Container": "incremental-demo",
+									"Folder": "customers_parquet_file"
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "New Records Check",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "LookupNewWatermark",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "LookupOldWatermark",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@greater(activity('LookupNewWatermark').output.firstRow.NewWatermarkValue, activity('LookupOldWatermark').output.firstRow.WatermarkValue)",
+								"type": "Expression"
+							},
+							"ifTrueActivities": [
+								{
+									"name": "CopyIncrementalData",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "SELECT * FROM Customers Where LastModifiedDate > '@{activity('LookupOldWatermark').output.firstRow.WatermarkValue}' and \nLastModifiedDate <= '@{activity('LookupNewWatermark').output.firstRow.NewWatermarkValue}' ;",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "src_azure_sql_query_ds",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "dest_blob_parquet_param_ds",
+											"type": "DatasetReference",
+											"parameters": {
+												"Container": "incremental-demo",
+												"Folder": "customers_parquet_file"
+											}
+										}
+									]
+								},
+								{
+									"name": "UpdateWatermarkControl",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "CopyIncrementalData",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": "[[dbo].[sp_UpdateWatermark]",
+										"storedProcedureParameters": {
+											"NewWatermarkValue": {
+												"value": {
+													"value": "@activity('LookupNewWatermark').output.firstRow.NewWatermarkValue",
+													"type": "Expression"
+												},
+												"type": "DateTime"
+											},
+											"TableName": {
+												"value": "Customers",
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "AzureSqlDatabase_LS",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Real_world_PLs_Hands-on"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/src_azure_sql_query_ds')]",
+				"[concat(variables('factoryId'), '/datasets/dest_blob_parquet_param_ds')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_LS')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/Rest_api_ingestion_pl')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
